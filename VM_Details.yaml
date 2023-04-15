@@ -1,38 +1,32 @@
 ---
 - name: Retrieve metadata keys from a Google Cloud instance
   hosts: localhost
-  connection: local
-  gather_facts: no
+  gather_facts: false
 
   tasks:
     # Define a function to retrieve a specific data key
-    - name: Get metadata key
-      command: "curl -H \"Metadata-Flavor: Google\" \"http://metadata.google.internal/computeMetadata/v1/instance/{{ key }}\""
+    - name: Define function to retrieve metadata key
+      shell: "curl -H 'Metadata-Flavor: Google' 'http://metadata.google.internal/computeMetadata/v1/instance/{{ key }}'"
       register: metadata_value
 
     # Print the list of available metadata keys
-    - name: List available metadata keys
-      shell: "curl -H \"Metadata-Flavor: Google\" \"http://metadata.google.internal/computeMetadata/v1/instance/\" | tr '/' '\n'"
+    - name: Print available metadata keys
+      shell: "curl -H 'Metadata-Flavor: Google' 'http://metadata.google.internal/computeMetadata/v1/instance/' | tr '/' '\n'"
       register: available_metadata_keys
-      changed_when: false
 
     # Ask the user for the metadata keys they want to retrieve
     - name: Ask user for metadata keys
       vars_prompt:
         - name: metadata_keys
           prompt: "Enter the metadata keys you want to retrieve (give a space if you want to try with multiple inputs): "
-          private: no
 
     # Convert the input string into an array of keys
-    - name: Split metadata keys
+    - name: Convert input string into an array of keys
       set_fact:
         metadata_keys_array: "{{ metadata_keys.split() }}"
 
     # Loop through the array of keys and retrieve their values
-    - name: Loop through metadata keys
+    - name: Loop through metadata keys array
       debug:
-        msg: "Metadata value for key {{ item }}: {{ get_metadata_key(item) }}"
+        msg: "Metadata value for key {{ item }}: {{ lookup('vars', 'metadata_value.stdout') }}"
       loop: "{{ metadata_keys_array }}"
-      vars:
-        get_metadata_key: "{{ lookup('pipe', 'curl -H \"Metadata-Flavor: Google\" \"http://metadata.google.internal/computeMetadata/v1/instance/' + item) }}"
-
