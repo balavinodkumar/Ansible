@@ -1,27 +1,38 @@
-# YAML equivalent of the Bash script to retrieve metadata keys from a Google Cloud instance
+---
+- name: Retrieve metadata keys from a Google Cloud instance
+  hosts: localhost
+  connection: local
+  gather_facts: no
 
-# Define a function to retrieve a specific data key
-get_metadata_key:
-  command: "curl -H \"Metadata-Flavor: Google\" \"http://metadata.google.internal/computeMetadata/v1/instance/$key\""
-  return: stdout
+  tasks:
+    # Define a function to retrieve a specific data key
+    - name: Get metadata key
+      command: "curl -H \"Metadata-Flavor: Google\" \"http://metadata.google.internal/computeMetadata/v1/instance/{{ key }}\""
+      register: metadata_value
 
-# Print the list of available metadata keys
-echo: "Available metadata keys for currently logged in instance are below:"
-run:
-  command: "curl -H \"Metadata-Flavor: Google\" \"http://metadata.google.internal/computeMetadata/v1/instance/\" | tr '/' '\\n'"
+    # Print the list of available metadata keys
+    - name: List available metadata keys
+      shell: "curl -H \"Metadata-Flavor: Google\" \"http://metadata.google.internal/computeMetadata/v1/instance/\" | tr '/' '\n'"
+      register: available_metadata_keys
+      changed_when: false
 
-# Ask the user for the metadata keys they want to retrieve
-read:
-  prompt: "Enter the metadata keys you want to retrieve (give a space if you wanna to try with multiple inputs): "
-  var: metadata_keys
+    # Ask the user for the metadata keys they want to retrieve
+    - name: Ask user for metadata keys
+      vars_prompt:
+        - name: metadata_keys
+          prompt: "Enter the metadata keys you want to retrieve (give a space if you want to try with multiple inputs): "
+          private: no
 
-# Convert the input string into an array of keys
-metadata_keys_array: "{metadata_keys}".split()
+    # Convert the input string into an array of keys
+    - name: Split metadata keys
+      set_fact:
+        metadata_keys_array: "{{ metadata_keys.split() }}"
 
-# Loop through the array of keys and retrieve their values
-for_loop:
-  iterator: metadata_key
-  iterable: metadata_keys_array
-  commands:
-    - metadata_value: get_metadata_key(metadata_key)
-    - echo: "Metadata value for key {metadata_key}: {metadata_value}"
+    # Loop through the array of keys and retrieve their values
+    - name: Loop through metadata keys
+      debug:
+        msg: "Metadata value for key {{ item }}: {{ get_metadata_key(item) }}"
+      loop: "{{ metadata_keys_array }}"
+      vars:
+        get_metadata_key: "{{ lookup('pipe', 'curl -H \"Metadata-Flavor: Google\" \"http://metadata.google.internal/computeMetadata/v1/instance/' + item) }}"
+
