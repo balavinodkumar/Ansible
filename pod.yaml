@@ -4,7 +4,7 @@
   gather_facts: false
 
   vars:
-    kubeconfig: /path/to/kubeconfig.yaml
+    kubeconfig: /etc/kubernetes/kubelet.conf
     namespace: default
     pod_name: my-pod
     image: nginx:latest
