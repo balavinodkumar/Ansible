@@ -1,0 +1,31 @@
+---
+- name: Deploy pod to Kubernetes
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    kubeconfig: /path/to/kubeconfig.yaml
+    namespace: default
+    pod_name: my-pod
+    image: nginx:latest
+
+  tasks:
+    - name: Create pod definition
+      copy:
+        content: |
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: "{{ pod_name }}"
+            labels:
+              app: nginx
+          spec:
+            containers:
+            - name: nginx
+              image: "{{ image }}"
+              ports:
+              - containerPort: 80
+      dest: /tmp/pod-definition.yaml
+
+    - name: Create pod
+      command: kubectl apply --kubeconfig="{{ kubeconfig }}" -f /tmp/pod-definition.yaml -n "{{ namespace }}"
